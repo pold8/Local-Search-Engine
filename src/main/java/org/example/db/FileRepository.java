@@ -124,7 +124,7 @@ public class FileRepository {
         try (PreparedStatement stmtFts = connection.prepareStatement(ftsSQL);
              PreparedStatement stmtName = connection.prepareStatement(nameSQL)) {
 
-            stmtFts.setString(1, query);
+            stmtFts.setString(1, sanitizeFtsQuery(query));
             ResultSet rsFts = stmtFts.executeQuery();
             int rank = 1;
             while (rsFts.next()) {
@@ -146,6 +146,22 @@ public class FileRepository {
         }
 
         return results;
+    }
+
+    /**
+     * Sanitizes a user query for FTS5 by wrapping each term in double quotes.
+     * This prevents special characters (like '.', '*', '-') from being
+     * interpreted as FTS5 syntax operators.
+     */
+    private String sanitizeFtsQuery(String query) {
+        String[] terms = query.trim().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < terms.length; i++) {
+            if (i > 0) sb.append(" ");
+            // Escape any double quotes within the term, then wrap in double quotes
+            sb.append("\"").append(terms[i].replace("\"", "\"\"")).append("\"");
+        }
+        return sb.toString();
     }
 
     private FileRecord mapResultSet(ResultSet rs) throws SQLException {

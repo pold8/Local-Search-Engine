@@ -1,0 +1,8 @@
+{
+  "rootDirectory": "/home/paul/Documents",
+  "databasePath": "search_engine.db",
+  "ignoredDirectories": [".git", "node_modules", "target", ".idea", ".mvn", ".gradle", "build", "__pycache__", ".cache", ".local"],
+  "ignoredExtensions": ["class", "jar", "exe", "bin", "zip", "tar", "gz", "bz2", "7z", "rar", "iso", "img", "o", "so", "dll", "war", "ear", "png", "jpg", "jpeg", "gif", "bmp", "ico", "svg", "mp3", "mp4", "avi", "mkv", "mov", "wav", "flac", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "sqlite", "db"],
+  "textExtensions": ["txt", "md", "java", "py", "js", "ts", "html", "css", "xml", "json", "yaml", "yml", "csv", "log", "sh", "bat", "c", "cpp", "h", "hpp", "rs", "go", "rb", "php", "sql", "properties", "cfg", "ini", "toml", "gradle", "kt", "scala"],
+  "reportFormat": "txt"
+}
