@@ -4,24 +4,28 @@ public class SearchResult {
     private final FileRecord fileRecord;
     private final String preview;
     private final int rank;
+    private final String matchReason;
 
-    public SearchResult(FileRecord fileRecord, String preview, int rank) {
+    public SearchResult(FileRecord fileRecord, String preview, int rank, String matchReason) {
         this.fileRecord = fileRecord;
         this.preview = preview;
         this.rank = rank;
+        this.matchReason = matchReason;
     }
 
     public FileRecord getFileRecord() { return fileRecord; }
     public String getPreview() { return preview; }
     public int getRank() { return rank; }
+    public String getMatchReason() { return matchReason; }
 
     @Override
     public String toString() {
-        return String.format("[%d] %s — %s (%s)%n     Preview: %s",
+        return String.format("[%d] %s — %s (%s)%n     Matched by: %s%n     Preview: %s",
                 rank,
                 fileRecord.getName(),
                 fileRecord.getPath(),
                 formatSize(fileRecord.getSize()),
+                matchReason,
                 preview != null ? preview.replace("\n", "\n     ") : "(no preview)");
     }
 

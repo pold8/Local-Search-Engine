@@ -129,7 +129,7 @@ public class FileRepository {
             int rank = 1;
             while (rsFts.next()) {
                 FileRecord record = mapResultSet(rsFts);
-                results.add(new SearchResult(record, record.getPreview(), rank++));
+                results.add(new SearchResult(record, record.getPreview(), rank++, "content match"));
             }
 
             stmtName.setString(1, "%" + query + "%");
@@ -140,7 +140,7 @@ public class FileRepository {
                         .anyMatch(r -> r.getFileRecord().getPath().equals(path));
                 if (!alreadyFound) {
                     FileRecord record = mapResultSet(rsName);
-                    results.add(new SearchResult(record, record.getPreview(), rank++));
+                    results.add(new SearchResult(record, record.getPreview(), rank++, "filename match"));
                 }
             }
         }

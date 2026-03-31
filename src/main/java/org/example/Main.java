@@ -13,15 +13,11 @@ import org.example.parser.Extractor;
 import org.example.parser.FileParser;
 
 import java.util.List;
+import java.util.Scanner;
 
 public class Main {
 
     public static void main(String[] args) {
-        if (args.length < 1) {
-            printUsage();
-            return;
-        }
-
         try {
             Config config = Config.load("config.json");
             config.validate();
@@ -31,44 +27,60 @@ public class Main {
 
             FileRepository repository = new FileRepository(db.getConnection());
 
-            String command = args[0];
+            printWelcome();
 
-            switch (command) {
-                case "index" -> {
-                    FileFilter filter = new FileFilter(config);
-                    Crawler crawler = new Crawler(filter);
-                    ChangeDetector changeDetector = new ChangeDetector(repository);
-                    Extractor textExtractor = new FileParser(config.getTextExtensions());
+            Scanner scanner = new Scanner(System.in);
 
-                    IndexManager indexManager = new IndexManager(
-                            config, crawler, filter,
-                            List.of(textExtractor),
-                            changeDetector, repository);
+            while (true) {
+                System.out.print("\n> ");
+                String line = scanner.nextLine().trim();
 
-                    IndexReport report = indexManager.index();
-                    System.out.println(report.generateReport());
-                }
+                if (line.isEmpty()) continue;
 
-                case "search" -> {
-                    if (args.length < 2) {
-                        System.out.println("Missing search query.");
-                        System.out.println("Usage: search <query>");
+                String[] parts = line.split("\\s+", 2);
+                String command = parts[0].toLowerCase();
+
+                switch (command) {
+                    case "index" -> {
+                        FileFilter filter = new FileFilter(config);
+                        Crawler crawler = new Crawler(filter);
+                        ChangeDetector changeDetector = new ChangeDetector(repository);
+                        Extractor textExtractor = new FileParser(config.getTextExtensions());
+
+                        IndexManager indexManager = new IndexManager(
+                                config, crawler, filter,
+                                List.of(textExtractor),
+                                changeDetector, repository);
+
+                        IndexReport report = indexManager.index();
+                        System.out.println(report.generateReport());
+                    }
+
+                    case "search" -> {
+                        if (parts.length < 2 || parts[1].isBlank()) {
+                            System.out.println("Missing search query.");
+                            System.out.println("Usage: search <query>");
+                            continue;
+                        }
+
+                        QueryEngine queryEngine = new QueryEngine(repository);
+                        queryEngine.search(parts[1]);
+                    }
+
+                    case "help" -> printHelp();
+
+                    case "exit", "quit" -> {
+                        System.out.println("Goodbye!");
+                        db.close();
                         return;
                     }
 
-                    String query = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
-
-                    QueryEngine queryEngine = new QueryEngine(repository);
-                    queryEngine.search(query);
-                }
-
-                default -> {
-                    System.out.println("Unknown command: " + command);
-                    printUsage();
+                    default -> {
+                        System.out.println("Unknown command: " + command);
+                        printHelp();
+                    }
                 }
             }
-
-            db.close();
 
         } catch (Exception e) {
             System.err.println("Fatal error: " + e.getMessage());
@@ -76,10 +88,30 @@ public class Main {
         }
     }
 
-    private static void printUsage() {
-        System.out.println("Local Search Engine — CLI");
-        System.out.println("Usage:");
+    private static void printWelcome() {
+        System.out.println();
+        System.out.println("╔══════════════════════════════════════════╗");
+        System.out.println("║       Local Search Engine — CLI          ║");
+        System.out.println("╚══════════════════════════════════════════╝");
+        System.out.println();
+        System.out.println("Available commands:");
         System.out.println("  index              Index files from the configured root directory");
         System.out.println("  search <query>     Search indexed files for the given query");
+        System.out.println("  help               Show this help message");
+        System.out.println("  exit               Exit the application");
+        System.out.println();
+        System.out.println("Examples:");
+        System.out.println("  search Main.java");
+        System.out.println("  search database connection");
+        System.out.println("  search TODO");
+        System.out.println("  index");
+    }
+
+    private static void printHelp() {
+        System.out.println("Available commands:");
+        System.out.println("  index              Index files from the configured root directory");
+        System.out.println("  search <query>     Search indexed files for the given query");
+        System.out.println("  help               Show this help message");
+        System.out.println("  exit               Exit the application");
     }
 }
