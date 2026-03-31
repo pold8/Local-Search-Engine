@@ -106,3 +106,132 @@ Components are the major structural building blocks inside the **Java Applicatio
 ---
 
 ## 4. Code (Level 4)
+
+```mermaid
+classDiagram
+    class Main {
+        +main(args: String[])
+    }
+    
+    class Config {
+        -String rootDirectory
+        -String databasePath
+        -List~String~ ignoredDirectories
+        -List~String~ ignoredExtensions
+        -List~String~ textExtensions
+        -String reportFormat
+        +load(path: String) Config$
+        +validate()
+    }
+    
+    class DatabaseManager {
+        -Connection connection
+        +initialize()
+        +close()
+        +getConnection() Connection
+    }
+    
+    class FileRepository {
+        -Connection connection
+        +save(record: FileRecord)
+        +update(record: FileRecord)
+        +delete(path: String)
+        +findByPath(path: String) FileRecord
+        +search(query: String) List~SearchResult~
+        -sanitizeFtsQuery(query: String) String
+    }
+    
+    class IndexManager {
+        -Config config
+        -Crawler crawler
+        -FileFilter filter
+        -List~Extractor~ extractors
+        -ChangeDetector changeDetector
+        -FileRepository repository
+        +index() IndexReport
+        -processFile(filePath: Path, report: IndexReport)
+    }
+    
+    class Crawler {
+        -FileFilter fileFilter
+        +crawl(rootDirectory: String, report: IndexReport) List~Path~
+    }
+    
+    class FileFilter {
+        -List~String~ ignoredDirectories
+        -List~String~ ignoredExtensions
+        +isIgnoredDirectory(dirPath: Path) boolean
+        +shouldIndex(filePath: Path) boolean
+        +getExtension(fileName: String) String
+    }
+    
+    class ChangeDetector {
+        -FileRepository repository
+        +getStatus(path: Path) FileStatus
+    }
+    
+    class Extractor {
+        <<interface>>
+        +supports(extension: String) boolean
+        +extract(path: Path) FileRecord
+    }
+    
+    class FileParser {
+        -List~String~ textExtensions
+        +supports(extension: String) boolean
+        +extract(path: Path) FileRecord
+    }
+    
+    class QueryEngine {
+        -FileRepository repository
+        +search(query: String)
+    }
+    
+    class FileRecord {
+        -long id
+        -String path
+        -String name
+        -String extension
+        -long size
+        -long lastModified
+        -String content
+        -String preview
+    }
+    
+    class SearchResult {
+        -FileRecord fileRecord
+        -String preview
+        -int rank
+        -String matchReason
+    }
+
+    Main --> Config
+    Main --> DatabaseManager
+    Main --> FileRepository
+    Main --> IndexManager
+    Main --> QueryEngine
+    
+    IndexManager --> Crawler
+    IndexManager --> FileFilter
+    IndexManager --> ChangeDetector
+    IndexManager --> Extractor
+    IndexManager --> FileRepository
+    
+    FileParser ..|> Extractor
+    
+    Crawler --> FileFilter
+    ChangeDetector --> FileRepository
+    QueryEngine --> FileRepository
+    
+    FileRepository ..> FileRecord
+    FileRepository ..> SearchResult
+    FileParser ..> FileRecord
+```
+
+Level 4 zoom shows exactly how the components map to Java interfaces and classes.
+
+* **Main:** Instantiates all dependencies, loads configuration, injects the `FileRepository` into the `IndexManager` and `QueryEngine`, and runs the interactive REPL.
+* **Config:** POJO that dynamically deserializes the JSON configuration.
+* **FileRepository / DatabaseManager:** Decouples core logic from SQLite-specific database connection and raw SQL.
+* **Extractor / FileParser:** Interfaces out the content ingestion step so adding support for new proprietary formats (e.g. PDF) just requires injecting a new class implementing `Extractor`.
+* **ChangeDetector:** Ensures speedier subsequent indexing passes by checking SQL records against actual FS bounds.
