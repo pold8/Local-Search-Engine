@@ -52,9 +52,16 @@ public class DatabaseManager {
                         extension     TEXT,
                         size          INTEGER,
                         last_modified INTEGER,
+                        file_hash     TEXT,
                         preview       TEXT
                     )
                     """);
+
+            try {
+                stmt.execute("ALTER TABLE files ADD COLUMN file_hash TEXT");
+            } catch (SQLException e) {
+                // Column likely already exists
+            }
 
             stmt.execute("""
                     CREATE INDEX IF NOT EXISTS idx_files_path

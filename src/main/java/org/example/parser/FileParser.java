@@ -28,12 +28,14 @@ public class FileParser implements Extractor {
         String extension = getExtension(fileName);
         long size = 0;
         long lastModified = 0;
+        String fileHash = "";
         String content = "";
         String preview = "";
 
         try {
             size = Files.size(filePath);
             lastModified = Files.getLastModifiedTime(filePath).toMillis();
+            fileHash = org.example.util.HashUtil.computeSHA256(filePath);
 
             if (size <= 5 * 1024 * 1024) {
                 content = Files.readString(filePath, StandardCharsets.UTF_8);
@@ -54,6 +56,7 @@ public class FileParser implements Extractor {
                 extension,
                 size,
                 lastModified,
+                fileHash,
                 content,
                 preview
         );

@@ -7,16 +7,18 @@ public class FileRecord {
     private String extension;
     private long size;
     private long lastModified;
+    private String fileHash;
     private String content;
     private String preview;
 
     public FileRecord(String path, String name, String extension, long size,
-                      long lastModified, String content, String preview) {
+                      long lastModified, String fileHash, String content, String preview) {
         this.path = path;
         this.name = name;
         this.extension = extension;
         this.size = size;
         this.lastModified = lastModified;
+        this.fileHash = fileHash;
         this.content = content;
         this.preview = preview;
     }
@@ -40,6 +42,9 @@ public class FileRecord {
     public long getLastModified() { return lastModified; }
     public void setLastModified(long lastModified) { this.lastModified = lastModified; }
 
+    public String getFileHash() { return fileHash; }
+    public void setFileHash(String fileHash) { this.fileHash = fileHash; }
+
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
@@ -54,6 +59,7 @@ public class FileRecord {
                 ", extension='" + extension + '\'' +
                 ", size=" + size +
                 ", lastModified=" + lastModified +
+                ", fileHash='" + fileHash + '\'' +
                 '}';
     }
 }

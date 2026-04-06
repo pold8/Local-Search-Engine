@@ -17,8 +17,8 @@ public class FileRepository {
 
     public void save(FileRecord record) throws SQLException {
         String insertFile = """
-                INSERT INTO files (path, name, extension, size, last_modified, preview)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO files (path, name, extension, size, last_modified, file_hash, preview)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """;
 
         String insertFts = """
@@ -34,7 +34,8 @@ public class FileRepository {
             stmtFile.setString(3, record.getExtension());
             stmtFile.setLong(4, record.getSize());
             stmtFile.setLong(5, record.getLastModified());
-            stmtFile.setString(6, record.getPreview());
+            stmtFile.setString(6, record.getFileHash());
+            stmtFile.setString(7, record.getPreview());
             stmtFile.executeUpdate();
 
             stmtFts.setString(1, record.getPath());
@@ -46,7 +47,7 @@ public class FileRepository {
     public void update(FileRecord record) throws SQLException {
         String updateFile = """
                 UPDATE files
-                SET name = ?, extension = ?, size = ?, last_modified = ?, preview = ?
+                SET name = ?, extension = ?, size = ?, last_modified = ?, file_hash = ?, preview = ?
                 WHERE path = ?
                 """;
 
@@ -61,8 +62,9 @@ public class FileRepository {
             stmtFile.setString(2, record.getExtension());
             stmtFile.setLong(3, record.getSize());
             stmtFile.setLong(4, record.getLastModified());
-            stmtFile.setString(5, record.getPreview());
-            stmtFile.setString(6, record.getPath());
+            stmtFile.setString(5, record.getFileHash());
+            stmtFile.setString(6, record.getPreview());
+            stmtFile.setString(7, record.getPath());
             stmtFile.executeUpdate();
 
             stmtDeleteFts.setString(1, record.getPath());
@@ -106,7 +108,7 @@ public class FileRepository {
         List<SearchResult> results = new ArrayList<>();
 
         String ftsSQL = """
-                SELECT f.path, f.name, f.extension, f.size, f.last_modified, f.preview
+                SELECT f.path, f.name, f.extension, f.size, f.last_modified, f.file_hash, f.preview
                 FROM files_fts fts
                 JOIN files f ON fts.path = f.path
                 WHERE files_fts MATCH ?
@@ -115,7 +117,7 @@ public class FileRepository {
                 """;
 
         String nameSQL = """
-                SELECT path, name, extension, size, last_modified, preview
+                SELECT path, name, extension, size, last_modified, file_hash, preview
                 FROM files
                 WHERE name LIKE ?
                 LIMIT 10
@@ -148,11 +150,6 @@ public class FileRepository {
         return results;
     }
 
-    /**
-     * Sanitizes a user query for FTS5 by wrapping each term in double quotes.
-     * This prevents special characters (like '.', '*', '-') from being
-     * interpreted as FTS5 syntax operators.
-     */
     private String sanitizeFtsQuery(String query) {
         String[] terms = query.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
@@ -171,6 +168,7 @@ public class FileRepository {
                 rs.getString("extension"),
                 rs.getLong("size"),
                 rs.getLong("last_modified"),
+                rs.getString("file_hash"),
                 "",
                 rs.getString("preview")
         );

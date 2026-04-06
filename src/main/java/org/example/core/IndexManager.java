@@ -104,11 +104,12 @@ public class IndexManager {
         try {
             long size = java.nio.file.Files.size(filePath);
             long lastModified = java.nio.file.Files.getLastModifiedTime(filePath).toMillis();
+            String fileHash = org.example.util.HashUtil.computeSHA256(filePath);
             String name = filePath.getFileName().toString();
 
             FileRecord record = new FileRecord(
                     filePath.toAbsolutePath().toString(),
-                    name, extension, size, lastModified, "", ""
+                    name, extension, size, lastModified, fileHash, "", ""
             );
 
             if (status == FileStatus.NEW) {

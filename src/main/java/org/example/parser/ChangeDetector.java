@@ -11,9 +11,9 @@ import java.sql.SQLException;
 public class ChangeDetector {
 
     public enum FileStatus {
-        NEW,        // never been indexed
-        MODIFIED,   // indexed before but last_modified has changed
-        UNCHANGED   // indexed before and timestamps match
+        NEW,
+        MODIFIED,
+        UNCHANGED
     }
 
     private final FileRepository repository;
@@ -29,10 +29,10 @@ public class ChangeDetector {
                 return FileStatus.NEW;
             }
 
-            long diskTimestamp = Files.getLastModifiedTime(filePath).toMillis();
-            long dbTimestamp = stored.getLastModified();
+            String diskHash = org.example.util.HashUtil.computeSHA256(filePath);
+            String dbHash = stored.getFileHash();
 
-            if (diskTimestamp == dbTimestamp) {
+            if (dbHash != null && diskHash.equals(dbHash)) {
                 return FileStatus.UNCHANGED;
             } else {
                 return FileStatus.MODIFIED;
@@ -40,9 +40,6 @@ public class ChangeDetector {
 
         } catch (SQLException e) {
             System.err.println("[ChangeDetector] DB error checking file: " + filePath + " — " + e.getMessage());
-            return FileStatus.NEW;
-        } catch (IOException e) {
-            System.err.println("[ChangeDetector] Cannot read timestamp: " + filePath + " — " + e.getMessage());
             return FileStatus.NEW;
         }
     }
