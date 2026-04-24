@@ -89,29 +89,33 @@ public class Main {
     }
 
     private static void printWelcome() {
-        System.out.println();
-        System.out.println("╔══════════════════════════════════════════╗");
-        System.out.println("║       Local Search Engine — CLI          ║");
-        System.out.println("╚══════════════════════════════════════════╝");
-        System.out.println();
-        System.out.println("Available commands:");
-        System.out.println("  index              Index files from the configured root directory");
-        System.out.println("  search <query>     Search indexed files for the given query");
-        System.out.println("  help               Show this help message");
-        System.out.println("  exit               Exit the application");
-        System.out.println();
-        System.out.println("Examples:");
-        System.out.println("  search Main.java");
-        System.out.println("  search database connection");
-        System.out.println("  search TODO");
-        System.out.println("  index");
+        String menu = """
+                
+                ╔══════════════════════════════════════════╗
+                ║       Local Search Engine — CLI          ║
+                ╚══════════════════════════════════════════╝
+                
+                Available commands:
+                  index              Index files from the configured root directory
+                  search <query>     Search indexed files for the given query
+                  help               Show this help message
+                  exit               Exit the application
+                
+                Examples:
+                  search Main.java
+                  search database connection
+                  search TODO
+                  index""";
+        System.out.println(menu);
     }
 
     private static void printHelp() {
-        System.out.println("Available commands:");
-        System.out.println("  index              Index files from the configured root directory");
-        System.out.println("  search <query>     Search indexed files for the given query");
-        System.out.println("  help               Show this help message");
-        System.out.println("  exit               Exit the application");
+        String help = """
+                Available commands:
+                  index              Index files from the configured root directory
+                  search <query>     Search indexed files for the given query
+                  help               Show this help message
+                  exit               Exit the application""";
+        System.out.println(help);
     }
 }
