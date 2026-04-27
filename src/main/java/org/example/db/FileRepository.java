@@ -3,6 +3,8 @@ package org.example.db;
 import org.example.model.FileRecord;
 import org.example.model.SearchResult;
 import org.example.parser.ParsedQuery;
+import org.example.ranking.RankingStrategy;
+import org.example.ranking.RelevanceRankingStrategy;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -11,9 +13,15 @@ import java.util.List;
 public class FileRepository {
 
     private final Connection connection;
+    private RankingStrategy rankingStrategy;
 
     public FileRepository(Connection connection) {
         this.connection = connection;
+        this.rankingStrategy = new RelevanceRankingStrategy();
+    }
+
+    public void setRankingStrategy(RankingStrategy strategy) {
+        this.rankingStrategy = strategy;
     }
 
     public void save(FileRecord record) throws SQLException {
@@ -115,7 +123,9 @@ public class FileRepository {
                 FROM files_fts fts
                 JOIN files f ON fts.path = f.path
                 WHERE files_fts MATCH ?
-                ORDER BY rank
+                """
+                + rankingStrategy.getOrderByClause() + """
+
                 LIMIT 20
                 """;
 
@@ -201,12 +211,7 @@ public class FileRepository {
         }
 
         if (hasFts) {
-            // rank is negative in SQLite FTS5 (lower = better match).
-            // path_score is [0,1] (higher = better file).
-            // Multiplying rank (negative) * -1 * path_score gives a positive
-            // value that is larger for better matches in better-scored files.
-            // Sorting ASC puts the best combined score at the top.
-            sql.append("ORDER BY (rank * -1 * f.path_score) ASC ");
+            sql.append(rankingStrategy.getOrderByClause()).append(" ");
         }
 
         sql.append("LIMIT 20");

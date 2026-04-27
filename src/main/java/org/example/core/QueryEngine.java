@@ -4,6 +4,8 @@ import org.example.db.FileRepository;
 import org.example.model.SearchResult;
 import org.example.parser.ParsedQuery;
 import org.example.parser.QueryParser;
+import org.example.ranking.RankingStrategy;
+import org.example.ranking.RelevanceRankingStrategy;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -11,9 +13,23 @@ import java.util.List;
 public class QueryEngine {
 
     private final FileRepository repository;
+    private RankingStrategy currentStrategy;
 
     public QueryEngine(FileRepository repository) {
         this.repository = repository;
+        this.currentStrategy = new RelevanceRankingStrategy();
+    }
+
+    public void setRankingStrategy(RankingStrategy strategy) {
+        this.currentStrategy = strategy;
+        this.repository.setRankingStrategy(strategy);
+    }
+
+    /** Returns a user-friendly label for the active strategy. */
+    public String getCurrentStrategyName() {
+        return currentStrategy.getClass().getSimpleName()
+                .replace("RankingStrategy", "")
+                .toLowerCase();
     }
 
     public void search(String rawQuery) {
@@ -26,7 +42,8 @@ public class QueryEngine {
                 return;
             }
 
-            System.out.println("\nSearch results for: " + formatHeader(parsedQuery));
+            System.out.println("\nSearch results for: " + formatHeader(parsedQuery)
+                    + "  [ranked by: " + getCurrentStrategyName() + "]");
             System.out.println("─".repeat(50));
 
             for (SearchResult result : results) {
