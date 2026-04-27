@@ -20,11 +20,12 @@ public class SearchResult {
 
     @Override
     public String toString() {
-        return String.format("[%d] %s — %s (%s)%n     Matched by: %s%n     Preview: %s",
+        return String.format("[%d] %s — %s (%s) [score: %.3f]%n     Matched by: %s%n     Preview: %s",
                 rank,
                 fileRecord.getName(),
                 fileRecord.getPath(),
                 formatSize(fileRecord.getSize()),
+                fileRecord.getPathScore(),
                 matchReason,
                 preview != null ? preview.replace("\n", "\n     ") : "(no preview)");
     }

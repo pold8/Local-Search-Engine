@@ -1,6 +1,7 @@
 package org.example.core;
 
 import org.example.config.Config;
+import org.example.core.PathScorer;
 import org.example.crawler.Crawler;
 import org.example.crawler.FileFilter;
 import org.example.db.FileRepository;
@@ -73,6 +74,7 @@ public class IndexManager {
             }
 
             FileRecord record = extractor.extract(filePath);
+            record.setPathScore(PathScorer.score(record.getPath()));
 
             if (status == FileStatus.NEW) {
                 repository.save(record);
@@ -111,6 +113,7 @@ public class IndexManager {
                     filePath.toAbsolutePath().toString(),
                     name, extension, size, lastModified, fileHash, "", ""
             );
+            record.setPathScore(PathScorer.score(record.getPath()));
 
             if (status == FileStatus.NEW) {
                 repository.save(record);

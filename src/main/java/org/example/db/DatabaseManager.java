@@ -60,7 +60,13 @@ public class DatabaseManager {
             try {
                 stmt.execute("ALTER TABLE files ADD COLUMN file_hash TEXT");
             } catch (SQLException e) {
-                // Column likely already exists
+
+            }
+
+            try {
+                stmt.execute("ALTER TABLE files ADD COLUMN path_score REAL DEFAULT 0.0");
+            } catch (SQLException e) {
+                // column already exists — safe to ignore
             }
 
             stmt.execute("""

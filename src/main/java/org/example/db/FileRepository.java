@@ -18,8 +18,8 @@ public class FileRepository {
 
     public void save(FileRecord record) throws SQLException {
         String insertFile = """
-                INSERT INTO files (path, name, extension, size, last_modified, file_hash, preview)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO files (path, name, extension, size, last_modified, file_hash, preview, path_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         String insertFts = """
@@ -37,6 +37,7 @@ public class FileRepository {
             stmtFile.setLong(5, record.getLastModified());
             stmtFile.setString(6, record.getFileHash());
             stmtFile.setString(7, record.getPreview());
+            stmtFile.setDouble(8, record.getPathScore());
             stmtFile.executeUpdate();
 
             stmtFts.setString(1, record.getPath());
@@ -48,7 +49,7 @@ public class FileRepository {
     public void update(FileRecord record) throws SQLException {
         String updateFile = """
                 UPDATE files
-                SET name = ?, extension = ?, size = ?, last_modified = ?, file_hash = ?, preview = ?
+                SET name = ?, extension = ?, size = ?, last_modified = ?, file_hash = ?, preview = ?, path_score = ?
                 WHERE path = ?
                 """;
 
@@ -65,7 +66,8 @@ public class FileRepository {
             stmtFile.setLong(4, record.getLastModified());
             stmtFile.setString(5, record.getFileHash());
             stmtFile.setString(6, record.getPreview());
-            stmtFile.setString(7, record.getPath());
+            stmtFile.setDouble(7, record.getPathScore());
+            stmtFile.setString(8, record.getPath());
             stmtFile.executeUpdate();
 
             stmtDeleteFts.setString(1, record.getPath());
@@ -109,7 +111,7 @@ public class FileRepository {
         List<SearchResult> results = new ArrayList<>();
 
         String ftsSQL = """
-                SELECT f.path, f.name, f.extension, f.size, f.last_modified, f.file_hash, f.preview
+                SELECT f.path, f.name, f.extension, f.size, f.last_modified, f.file_hash, f.preview, f.path_score
                 FROM files_fts fts
                 JOIN files f ON fts.path = f.path
                 WHERE files_fts MATCH ?
@@ -118,7 +120,7 @@ public class FileRepository {
                 """;
 
         String nameSQL = """
-                SELECT path, name, extension, size, last_modified, file_hash, preview
+                SELECT path, name, extension, size, last_modified, file_hash, preview, path_score
                 FROM files
                 WHERE name LIKE ?
                 LIMIT 10
@@ -173,7 +175,7 @@ public class FileRepository {
         // ── Build dynamic SQL ──────────────────────────────────────────────
         StringBuilder sql = new StringBuilder("""
                 SELECT f.path, f.name, f.extension, f.size,
-                       f.last_modified, f.file_hash, f.preview
+                       f.last_modified, f.file_hash, f.preview, f.path_score
                 FROM files f
                 """);
 
@@ -199,7 +201,12 @@ public class FileRepository {
         }
 
         if (hasFts) {
-            sql.append("ORDER BY rank ");
+            // rank is negative in SQLite FTS5 (lower = better match).
+            // path_score is [0,1] (higher = better file).
+            // Multiplying rank (negative) * -1 * path_score gives a positive
+            // value that is larger for better matches in better-scored files.
+            // Sorting ASC puts the best combined score at the top.
+            sql.append("ORDER BY (rank * -1 * f.path_score) ASC ");
         }
 
         sql.append("LIMIT 20");
@@ -259,7 +266,7 @@ public class FileRepository {
     }
 
     private FileRecord mapResultSet(ResultSet rs) throws SQLException {
-        return new FileRecord(
+        FileRecord record = new FileRecord(
                 rs.getString("path"),
                 rs.getString("name"),
                 rs.getString("extension"),
@@ -269,5 +276,11 @@ public class FileRepository {
                 "",
                 rs.getString("preview")
         );
+        try {
+            record.setPathScore(rs.getDouble("path_score"));
+        } catch (SQLException ignored) {
+            // column may not exist in older DB snapshots before migration
+        }
+        return record;
     }
 }

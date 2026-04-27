@@ -10,6 +10,7 @@ public class FileRecord {
     private String fileHash;
     private String content;
     private String preview;
+    private double pathScore;  // computed by PathScorer, persisted in DB
 
     public FileRecord(String path, String name, String extension, long size,
                       long lastModified, String fileHash, String content, String preview) {
@@ -50,6 +51,9 @@ public class FileRecord {
 
     public String getPreview() { return preview; }
     public void setPreview(String preview) { this.preview = preview; }
+
+    public double getPathScore() { return pathScore; }
+    public void setPathScore(double pathScore) { this.pathScore = pathScore; }
 
     @Override
     public String toString() {
