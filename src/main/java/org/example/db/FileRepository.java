@@ -2,6 +2,7 @@ package org.example.db;
 
 import org.example.model.FileRecord;
 import org.example.model.SearchResult;
+import org.example.parser.ParsedQuery;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -150,12 +151,108 @@ public class FileRepository {
         return results;
     }
 
+    /**
+     * Executes a structured search described by a {@link ParsedQuery}.
+     *
+     * <ul>
+     *   <li>If {@code query.isQualified()} is {@code false}, delegates to
+     *       {@link #search(String)} for full backward compatibility.</li>
+     *   <li>Otherwise builds a single SQL statement that:<br>
+     *       &ndash; ANDs all {@code content:} terms via FTS MATCH,<br>
+     *       &ndash; ANDs all {@code path:}   terms via {@code LIKE '%term%'}.</li>
+     * </ul>
+     */
+    public List<SearchResult> searchParsed(ParsedQuery query) throws SQLException {
+        // Fall back to plain search when no qualifiers were found
+        if (!query.isQualified()) {
+            return search(query.getRawQuery());
+        }
+
+        List<SearchResult> results = new ArrayList<>();
+
+        // ── Build dynamic SQL ──────────────────────────────────────────────
+        StringBuilder sql = new StringBuilder("""
+                SELECT f.path, f.name, f.extension, f.size,
+                       f.last_modified, f.file_hash, f.preview
+                FROM files f
+                """);
+
+        List<String> contentTerms = query.getContentTerms();
+        List<String> pathTerms    = query.getPathTerms();
+
+        boolean hasFts  = !contentTerms.isEmpty();
+        boolean hasPath = !pathTerms.isEmpty();
+
+        if (hasFts) {
+            // Join files_fts only when we have content qualifiers
+            sql.append("JOIN files_fts fts ON fts.path = f.path ");
+        }
+
+        sql.append("WHERE 1=1 ");
+
+        if (hasFts) {
+            sql.append("AND files_fts MATCH ? ");
+        }
+
+        for (int i = 0; i < pathTerms.size(); i++) {
+            sql.append("AND f.path LIKE ? ");
+        }
+
+        if (hasFts) {
+            sql.append("ORDER BY rank ");
+        }
+
+        sql.append("LIMIT 20");
+
+        // ── Bind parameters and execute ────────────────────────────────────
+        try (PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
+            int idx = 1;
+
+            if (hasFts) {
+                // Build a single FTS expression: "term1" AND "term2" AND …
+                StringBuilder ftsExpr = new StringBuilder();
+                for (int i = 0; i < contentTerms.size(); i++) {
+                    if (i > 0) ftsExpr.append(" AND ");
+                    ftsExpr.append("\"").append(
+                            contentTerms.get(i).replace("\"", "\"\"")).append("\"");
+                }
+                stmt.setString(idx++, ftsExpr.toString());
+            }
+
+            for (String pathTerm : pathTerms) {
+                stmt.setString(idx++, "%" + pathTerm + "%");
+            }
+
+            ResultSet rs = stmt.executeQuery();
+            int rank = 1;
+            while (rs.next()) {
+                FileRecord record = mapResultSet(rs);
+                String matchReason = buildMatchReason(contentTerms, pathTerms);
+                results.add(new SearchResult(record, record.getPreview(), rank++, matchReason));
+            }
+        }
+
+        return results;
+    }
+
+    /** Human-readable match-reason label shown in the results list. */
+    private String buildMatchReason(List<String> contentTerms, List<String> pathTerms) {
+        StringBuilder sb = new StringBuilder();
+        if (!contentTerms.isEmpty()) {
+            sb.append("content match (").append(String.join(" AND ", contentTerms)).append(")");
+        }
+        if (!pathTerms.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("path match (").append(String.join(" AND ", pathTerms)).append(")");
+        }
+        return sb.toString();
+    }
+
     private String sanitizeFtsQuery(String query) {
         String[] terms = query.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < terms.length; i++) {
             if (i > 0) sb.append(" ");
-            // Escape any double quotes within the term, then wrap in double quotes
             sb.append("\"").append(terms[i].replace("\"", "\"\"")).append("\"");
         }
         return sb.toString();
