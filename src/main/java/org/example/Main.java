@@ -7,6 +7,7 @@ import org.example.crawler.Crawler;
 import org.example.crawler.FileFilter;
 import org.example.db.DatabaseManager;
 import org.example.db.FileRepository;
+import org.example.model.DuplicateGroup;
 import org.example.model.IndexReport;
 import org.example.parser.ChangeDetector;
 import org.example.parser.Extractor;
@@ -101,6 +102,24 @@ public class Main {
                         }
                     }
 
+                    case "duplicates" -> {
+                        List<DuplicateGroup> groups = repository.findDuplicates();
+                        if (groups.isEmpty()) {
+                            System.out.println("No duplicate files found.");
+                        } else {
+                            System.out.printf("Found %d duplicate group(s):%n", groups.size());
+                            for (int i = 0; i < groups.size(); i++) {
+                                DuplicateGroup group = groups.get(i);
+                                String shortHash = group.getFileHash().substring(0, Math.min(8, group.getFileHash().length()));
+                                System.out.printf("%nGroup %d — %d files (%s each) [hash: %s]%n",
+                                        i + 1, group.getPaths().size(), formatSize(group.getSize()), shortHash);
+                                for (String path : group.getPaths()) {
+                                    System.out.println("  → " + path);
+                                }
+                            }
+                        }
+                    }
+
                     case "help" -> printHelp();
 
                     case "exit", "quit" -> {
@@ -133,6 +152,7 @@ public class Main {
                   index                        Index files from the configured root directory
                   search <query>               Search indexed files for the given query
                   rank <relevance|date|alpha>  Change the ranking strategy
+                  duplicates                   Find duplicate files in the index
                   help                         Show this help message
                   exit                         Exit the application
                 
@@ -150,6 +170,7 @@ public class Main {
                   index                        Index files from the configured root directory
                   search <query>               Search indexed files for the given query
                   rank <relevance|date|alpha>  Change the ranking strategy
+                  duplicates                   Find duplicate files in the index
                   help                         Show this help message
                   exit                         Exit the application""";
         System.out.println(help);
@@ -160,5 +181,11 @@ public class Main {
         System.out.println("  relevance  — FTS match quality combined with path score (default)");
         System.out.println("  date       — Most recently modified files first");
         System.out.println("  alpha      — Alphabetical by file name (A → Z)");
+    }
+
+    private static String formatSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        return String.format("%.1f MB", bytes / (1024.0 * 1024));
     }
 }

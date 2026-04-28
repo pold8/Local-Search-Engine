@@ -1,5 +1,6 @@
 package org.example.db;
 
+import org.example.model.DuplicateGroup;
 import org.example.model.FileRecord;
 import org.example.model.SearchResult;
 import org.example.parser.ParsedQuery;
@@ -243,6 +244,30 @@ public class FileRepository {
             sb.append("path match (").append(String.join(" AND ", pathTerms)).append(")");
         }
         return sb.toString();
+    }
+
+    public List<DuplicateGroup> findDuplicates() throws SQLException {
+        List<DuplicateGroup> duplicates = new ArrayList<>();
+        String sql = """
+                SELECT file_hash, size, GROUP_CONCAT(path, '||') as paths, COUNT(*) as count
+                FROM files
+                WHERE file_hash IS NOT NULL AND file_hash != ''
+                GROUP BY file_hash
+                HAVING COUNT(*) > 1
+                ORDER BY count DESC, size DESC
+                """;
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                String hash = rs.getString("file_hash");
+                long size = rs.getLong("size");
+                String pathsStr = rs.getString("paths");
+                List<String> paths = List.of(pathsStr.split("\\|\\|"));
+                duplicates.add(new DuplicateGroup(hash, size, paths));
+            }
+        }
+        return duplicates;
     }
 
     private String sanitizeFtsQuery(String query) {
