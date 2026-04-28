@@ -120,6 +120,23 @@ public class Main {
                         }
                     }
 
+                    case "duplicate" -> {
+                        if (parts.length < 2 || parts[1].isBlank()) {
+                            System.out.println("Usage: duplicate <filepath>");
+                            continue;
+                        }
+                        String path = parts[1].trim();
+                        List<String> dups = repository.findDuplicatesOf(path);
+                        if (dups.isEmpty()) {
+                            System.out.println("No other duplicates found for: " + path);
+                        } else {
+                            System.out.printf("Found %d duplicate(s) for %s:%n", dups.size(), path);
+                            for (String dupPath : dups) {
+                                System.out.println("  → " + dupPath);
+                            }
+                        }
+                    }
+
                     case "help" -> printHelp();
 
                     case "exit", "quit" -> {
@@ -153,6 +170,7 @@ public class Main {
                   search <query>               Search indexed files for the given query
                   rank <relevance|date|alpha>  Change the ranking strategy
                   duplicates                   Find duplicate files in the index
+                  duplicate <path>             Find duplicates of a specific file
                   help                         Show this help message
                   exit                         Exit the application
                 
@@ -171,6 +189,7 @@ public class Main {
                   search <query>               Search indexed files for the given query
                   rank <relevance|date|alpha>  Change the ranking strategy
                   duplicates                   Find duplicate files in the index
+                  duplicate <path>             Find duplicates of a specific file
                   help                         Show this help message
                   exit                         Exit the application""";
         System.out.println(help);

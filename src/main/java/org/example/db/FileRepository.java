@@ -270,6 +270,34 @@ public class FileRepository {
         return duplicates;
     }
 
+    public List<String> findDuplicatesOf(String path) throws SQLException {
+        String hashSql = "SELECT file_hash FROM files WHERE path = ?";
+        String hash = null;
+        try (PreparedStatement stmt = connection.prepareStatement(hashSql)) {
+            stmt.setString(1, path);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                hash = rs.getString("file_hash");
+            }
+        }
+
+        if (hash == null || hash.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String dupSql = "SELECT path FROM files WHERE file_hash = ? AND path != ?";
+        List<String> dups = new ArrayList<>();
+        try (PreparedStatement stmt = connection.prepareStatement(dupSql)) {
+            stmt.setString(1, hash);
+            stmt.setString(2, path);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                dups.add(rs.getString("path"));
+            }
+        }
+        return dups;
+    }
+
     private String sanitizeFtsQuery(String query) {
         String[] terms = query.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
