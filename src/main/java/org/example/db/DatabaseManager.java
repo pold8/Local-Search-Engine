@@ -45,6 +45,14 @@ public class DatabaseManager {
         try (Statement stmt = connection.createStatement()) {
 
             stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS search_history (
+                        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                        query     TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    )
+                    """);
+
+            stmt.execute("""
                     CREATE TABLE IF NOT EXISTS files (
                         id            INTEGER PRIMARY KEY AUTOINCREMENT,
                         path          TEXT    NOT NULL UNIQUE,

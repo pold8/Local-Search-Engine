@@ -11,6 +11,9 @@ import org.example.model.IndexReport;
 import org.example.parser.ChangeDetector;
 import org.example.parser.Extractor;
 import org.example.parser.FileParser;
+import org.example.db.SearchHistoryRepository;
+import org.example.observer.HistoryObserver;
+import org.example.observer.RankBoostObserver;
 import org.example.ranking.AlphabeticalRankingStrategy;
 import org.example.ranking.DateRankingStrategy;
 import org.example.ranking.RelevanceRankingStrategy;
@@ -29,9 +32,12 @@ public class Main {
             db.initialize();
 
             FileRepository repository = new FileRepository(db.getConnection());
+            SearchHistoryRepository historyRepository = new SearchHistoryRepository(db.getConnection());
 
             // QueryEngine is created once so ranking strategy persists across commands
-            QueryEngine queryEngine = new QueryEngine(repository);
+            QueryEngine queryEngine = new QueryEngine(repository, historyRepository);
+            queryEngine.addObserver(new RankBoostObserver(historyRepository));
+            queryEngine.addObserver(new HistoryObserver(historyRepository));
 
             printWelcome();
 

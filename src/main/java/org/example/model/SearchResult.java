@@ -5,6 +5,7 @@ public class SearchResult {
     private final String preview;
     private final int rank;
     private final String matchReason;
+    private int rankBoost = 0;
 
     public SearchResult(FileRecord fileRecord, String preview, int rank, String matchReason) {
         this.fileRecord = fileRecord;
@@ -18,10 +19,15 @@ public class SearchResult {
     public int getRank() { return rank; }
     public String getMatchReason() { return matchReason; }
 
+    public void addRankBoost(int boost) { this.rankBoost += boost; }
+    public int getRankBoost() { return rankBoost; }
+
     @Override
     public String toString() {
-        return String.format("[%d] %s — %s (%s) [score: %.3f]%n     Matched by: %s%n     Preview: %s",
+        String boostStr = rankBoost > 0 ? " [boosted]" : "";
+        return String.format("[%d]%s %s — %s (%s) [score: %.3f]%n     Matched by: %s%n     Preview: %s",
                 rank,
+                boostStr,
                 fileRecord.getName(),
                 fileRecord.getPath(),
                 formatSize(fileRecord.getSize()),

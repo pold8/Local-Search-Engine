@@ -37,7 +37,6 @@ public class Config {
         }
     }
 
-    // --- Getters & Setters ---
 
     public String getRootDirectory() {
         return rootDirectory;

@@ -36,7 +36,7 @@ public class FileRepository {
                 """;
 
         try (PreparedStatement stmtFile = connection.prepareStatement(insertFile);
-             PreparedStatement stmtFts = connection.prepareStatement(insertFts)) {
+                PreparedStatement stmtFts = connection.prepareStatement(insertFts)) {
 
             stmtFile.setString(1, record.getPath());
             stmtFile.setString(2, record.getName());
@@ -65,8 +65,8 @@ public class FileRepository {
         String insertFts = "INSERT INTO files_fts (path, content) VALUES (?, ?)";
 
         try (PreparedStatement stmtFile = connection.prepareStatement(updateFile);
-             PreparedStatement stmtDeleteFts = connection.prepareStatement(deleteFts);
-             PreparedStatement stmtInsertFts = connection.prepareStatement(insertFts)) {
+                PreparedStatement stmtDeleteFts = connection.prepareStatement(deleteFts);
+                PreparedStatement stmtInsertFts = connection.prepareStatement(insertFts)) {
 
             stmtFile.setString(1, record.getName());
             stmtFile.setString(2, record.getExtension());
@@ -90,8 +90,8 @@ public class FileRepository {
     public void delete(String path) throws SQLException {
         try (PreparedStatement stmtFile = connection.prepareStatement(
                 "DELETE FROM files WHERE path = ?");
-             PreparedStatement stmtFts = connection.prepareStatement(
-                     "DELETE FROM files_fts WHERE path = ?")) {
+                PreparedStatement stmtFts = connection.prepareStatement(
+                        "DELETE FROM files_fts WHERE path = ?")) {
 
             stmtFile.setString(1, path);
             stmtFile.executeUpdate();
@@ -126,8 +126,8 @@ public class FileRepository {
                 """
                 + rankingStrategy.getOrderByClause() + """
 
-                LIMIT 20
-                """;
+                        LIMIT 20
+                        """;
 
         String nameSQL = """
                 SELECT path, name, extension, size, last_modified, file_hash, preview, path_score
@@ -137,7 +137,7 @@ public class FileRepository {
                 """;
 
         try (PreparedStatement stmtFts = connection.prepareStatement(ftsSQL);
-             PreparedStatement stmtName = connection.prepareStatement(nameSQL)) {
+                PreparedStatement stmtName = connection.prepareStatement(nameSQL)) {
 
             stmtFts.setString(1, sanitizeFtsQuery(query));
             ResultSet rsFts = stmtFts.executeQuery();
@@ -163,26 +163,13 @@ public class FileRepository {
         return results;
     }
 
-    /**
-     * Executes a structured search described by a {@link ParsedQuery}.
-     *
-     * <ul>
-     *   <li>If {@code query.isQualified()} is {@code false}, delegates to
-     *       {@link #search(String)} for full backward compatibility.</li>
-     *   <li>Otherwise builds a single SQL statement that:<br>
-     *       &ndash; ANDs all {@code content:} terms via FTS MATCH,<br>
-     *       &ndash; ANDs all {@code path:}   terms via {@code LIKE '%term%'}.</li>
-     * </ul>
-     */
     public List<SearchResult> searchParsed(ParsedQuery query) throws SQLException {
-        // Fall back to plain search when no qualifiers were found
         if (!query.isQualified()) {
             return search(query.getRawQuery());
         }
 
         List<SearchResult> results = new ArrayList<>();
 
-        // ── Build dynamic SQL ──────────────────────────────────────────────
         StringBuilder sql = new StringBuilder("""
                 SELECT f.path, f.name, f.extension, f.size,
                        f.last_modified, f.file_hash, f.preview, f.path_score
@@ -190,13 +177,12 @@ public class FileRepository {
                 """);
 
         List<String> contentTerms = query.getContentTerms();
-        List<String> pathTerms    = query.getPathTerms();
+        List<String> pathTerms = query.getPathTerms();
 
-        boolean hasFts  = !contentTerms.isEmpty();
+        boolean hasFts = !contentTerms.isEmpty();
         boolean hasPath = !pathTerms.isEmpty();
 
         if (hasFts) {
-            // Join files_fts only when we have content qualifiers
             sql.append("JOIN files_fts fts ON fts.path = f.path ");
         }
 
@@ -216,15 +202,14 @@ public class FileRepository {
 
         sql.append("LIMIT 20");
 
-        // ── Bind parameters and execute ────────────────────────────────────
         try (PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
             int idx = 1;
 
             if (hasFts) {
-                // Build a single FTS expression: "term1" AND "term2" AND …
                 StringBuilder ftsExpr = new StringBuilder();
                 for (int i = 0; i < contentTerms.size(); i++) {
-                    if (i > 0) ftsExpr.append(" AND ");
+                    if (i > 0)
+                        ftsExpr.append(" AND ");
                     ftsExpr.append("\"").append(
                             contentTerms.get(i).replace("\"", "\"\"")).append("\"");
                 }
@@ -247,14 +232,14 @@ public class FileRepository {
         return results;
     }
 
-    /** Human-readable match-reason label shown in the results list. */
     private String buildMatchReason(List<String> contentTerms, List<String> pathTerms) {
         StringBuilder sb = new StringBuilder();
         if (!contentTerms.isEmpty()) {
             sb.append("content match (").append(String.join(" AND ", contentTerms)).append(")");
         }
         if (!pathTerms.isEmpty()) {
-            if (sb.length() > 0) sb.append("; ");
+            if (sb.length() > 0)
+                sb.append("; ");
             sb.append("path match (").append(String.join(" AND ", pathTerms)).append(")");
         }
         return sb.toString();
@@ -264,7 +249,8 @@ public class FileRepository {
         String[] terms = query.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < terms.length; i++) {
-            if (i > 0) sb.append(" ");
+            if (i > 0)
+                sb.append(" ");
             sb.append("\"").append(terms[i].replace("\"", "\"\"")).append("\"");
         }
         return sb.toString();
@@ -279,12 +265,11 @@ public class FileRepository {
                 rs.getLong("last_modified"),
                 rs.getString("file_hash"),
                 "",
-                rs.getString("preview")
-        );
+                rs.getString("preview"));
         try {
             record.setPathScore(rs.getDouble("path_score"));
         } catch (SQLException ignored) {
-            // column may not exist in older DB snapshots before migration
+
         }
         return record;
     }
