@@ -11,6 +11,7 @@ public class FileRecord {
     private String content;
     private String preview;
     private double pathScore;  // computed by PathScorer, persisted in DB
+    private String dominantColor; // null for non-image files
 
     public FileRecord(String path, String name, String extension, long size,
                       long lastModified, String fileHash, String content, String preview) {
@@ -54,6 +55,9 @@ public class FileRecord {
 
     public double getPathScore() { return pathScore; }
     public void setPathScore(double pathScore) { this.pathScore = pathScore; }
+
+    public String getDominantColor() { return dominantColor; }
+    public void setDominantColor(String dominantColor) { this.dominantColor = dominantColor; }
 
     @Override
     public String toString() {

@@ -9,9 +9,10 @@ import org.example.db.DatabaseManager;
 import org.example.db.FileRepository;
 import org.example.model.DuplicateGroup;
 import org.example.model.IndexReport;
+import org.example.indexing.FileProcessor;
+import org.example.indexing.ImageFileStrategy;
+import org.example.indexing.TextFileStrategy;
 import org.example.parser.ChangeDetector;
-import org.example.parser.Extractor;
-import org.example.parser.FileParser;
 import org.example.db.SearchHistoryRepository;
 import org.example.observer.HistoryObserver;
 import org.example.observer.RankBoostObserver;
@@ -58,11 +59,13 @@ public class Main {
                         FileFilter filter = new FileFilter(config);
                         Crawler crawler = new Crawler(filter);
                         ChangeDetector changeDetector = new ChangeDetector(repository);
-                        Extractor textExtractor = new FileParser(config.getTextExtensions());
+                        FileProcessor fileProcessor = new FileProcessor(List.of(
+                                new TextFileStrategy(config.getTextExtensions()),
+                                new ImageFileStrategy()));
 
                         IndexManager indexManager = new IndexManager(
                                 config, crawler, filter,
-                                List.of(textExtractor),
+                                List.of(fileProcessor),
                                 changeDetector, repository);
 
                         IndexReport report = indexManager.index();
@@ -177,6 +180,7 @@ public class Main {
                 Examples:
                   search Main.java
                   search content:java path:Documents
+                  search color:red
                   rank date
                   index""";
         System.out.println(menu);
