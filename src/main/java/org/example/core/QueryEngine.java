@@ -89,12 +89,6 @@ public class QueryEngine {
         }
     }
 
-    /**
-     * Returns a human-readable header describing the active search terms.
-     * <p>
-     * Qualified example: {@code content:[java, homework] path:[Documents]}
-     * <br>Plain example:  {@code "java"}
-     */
     private String formatHeader(ParsedQuery query) {
         if (!query.isQualified()) {
             return "\"" + query.getRawQuery() + "\"";
@@ -109,6 +103,11 @@ public class QueryEngine {
         if (!query.getPathTerms().isEmpty()) {
             if (sb.length() > 0) sb.append(" ");
             sb.append("path:").append(query.getPathTerms());
+        }
+
+        if (query.getColorTerm() != null) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append("color:").append(query.getColorTerm());
         }
 
         return sb.toString();

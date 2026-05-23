@@ -56,7 +56,7 @@ class QueryParserTest {
         assertEquals(List.of("hello"), q.getContentTerms());
         assertEquals(List.of("src"), q.getPathTerms());
     }
-    
+
     @Test
     void testParseEmptyValues() {
         ParsedQuery q = QueryParser.parse("content: path:");
@@ -64,5 +64,29 @@ class QueryParserTest {
         assertEquals("content: path:", q.getRawQuery());
         assertTrue(q.getContentTerms().isEmpty());
         assertTrue(q.getPathTerms().isEmpty());
+        assertNull(q.getColorTerm());
+    }
+
+    @Test
+    void testParseColorQualifier() {
+        ParsedQuery q = QueryParser.parse("color:red");
+        assertTrue(q.isQualified());
+        assertEquals("red", q.getColorTerm());
+        assertTrue(q.getContentTerms().isEmpty());
+        assertTrue(q.getPathTerms().isEmpty());
+    }
+
+    @Test
+    void testParseColorNormalizedToLowercase() {
+        ParsedQuery q = QueryParser.parse("color:Blue");
+        assertEquals("blue", q.getColorTerm());
+    }
+
+    @Test
+    void testParseColorWithPath() {
+        ParsedQuery q = QueryParser.parse("color:green path:photos");
+        assertTrue(q.isQualified());
+        assertEquals("green", q.getColorTerm());
+        assertEquals(List.of("photos"), q.getPathTerms());
     }
 }
