@@ -17,8 +17,9 @@ public class DatabaseManager {
     public void initialize() throws SQLException {
         connection = DriverManager.getConnection("jdbc:sqlite:" + databasePath);
 
-        try (Statement pragma = connection.createStatement()) {
-            pragma.execute("PRAGMA journal_mode=WAL");
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("PRAGMA journal_mode=WAL");
+            stmt.execute("PRAGMA synchronous=NORMAL");
         }
 
         System.out.println("[DB] Database initialized at: " + databasePath);
@@ -73,6 +74,12 @@ public class DatabaseManager {
 
             try {
                 stmt.execute("ALTER TABLE files ADD COLUMN path_score REAL DEFAULT 0.0");
+            } catch (SQLException e) {
+                // column already exists — safe to ignore
+            }
+
+            try {
+                stmt.execute("ALTER TABLE files ADD COLUMN dominant_color TEXT");
             } catch (SQLException e) {
                 // column already exists — safe to ignore
             }

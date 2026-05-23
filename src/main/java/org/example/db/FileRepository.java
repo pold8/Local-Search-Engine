@@ -25,10 +25,28 @@ public class FileRepository {
         this.rankingStrategy = strategy;
     }
 
+    public void beginTransaction() throws SQLException {
+        connection.setAutoCommit(false);
+    }
+
+    public void commitTransaction() throws SQLException {
+        connection.commit();
+        connection.setAutoCommit(true);
+    }
+
+    public void rollbackTransaction() {
+        try {
+            if (!connection.getAutoCommit()) {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException ignored) {}
+    }
+
     public void save(FileRecord record) throws SQLException {
         String insertFile = """
-                INSERT INTO files (path, name, extension, size, last_modified, file_hash, preview, path_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO files (path, name, extension, size, last_modified, file_hash, preview, path_score, dominant_color)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         String insertFts = """
@@ -47,6 +65,7 @@ public class FileRepository {
             stmtFile.setString(6, record.getFileHash());
             stmtFile.setString(7, record.getPreview());
             stmtFile.setDouble(8, record.getPathScore());
+            stmtFile.setString(9, record.getDominantColor());
             stmtFile.executeUpdate();
 
             stmtFts.setString(1, record.getPath());
@@ -58,7 +77,7 @@ public class FileRepository {
     public void update(FileRecord record) throws SQLException {
         String updateFile = """
                 UPDATE files
-                SET name = ?, extension = ?, size = ?, last_modified = ?, file_hash = ?, preview = ?, path_score = ?
+                SET name = ?, extension = ?, size = ?, last_modified = ?, file_hash = ?, preview = ?, path_score = ?, dominant_color = ?
                 WHERE path = ?
                 """;
 
@@ -76,7 +95,8 @@ public class FileRepository {
             stmtFile.setString(5, record.getFileHash());
             stmtFile.setString(6, record.getPreview());
             stmtFile.setDouble(7, record.getPathScore());
-            stmtFile.setString(8, record.getPath());
+            stmtFile.setString(8, record.getDominantColor());
+            stmtFile.setString(9, record.getPath());
             stmtFile.executeUpdate();
 
             stmtDeleteFts.setString(1, record.getPath());
@@ -179,9 +199,10 @@ public class FileRepository {
 
         List<String> contentTerms = query.getContentTerms();
         List<String> pathTerms = query.getPathTerms();
+        String colorTerm = query.getColorTerm();
 
         boolean hasFts = !contentTerms.isEmpty();
-        boolean hasPath = !pathTerms.isEmpty();
+        boolean hasColor = colorTerm != null && !colorTerm.isBlank();
 
         if (hasFts) {
             sql.append("JOIN files_fts fts ON fts.path = f.path ");
@@ -195,6 +216,10 @@ public class FileRepository {
 
         for (int i = 0; i < pathTerms.size(); i++) {
             sql.append("AND f.path LIKE ? ");
+        }
+
+        if (hasColor) {
+            sql.append("AND f.dominant_color = ? ");
         }
 
         if (hasFts) {
@@ -221,11 +246,15 @@ public class FileRepository {
                 stmt.setString(idx++, "%" + pathTerm + "%");
             }
 
+            if (hasColor) {
+                stmt.setString(idx++, colorTerm.toLowerCase());
+            }
+
             ResultSet rs = stmt.executeQuery();
             int rank = 1;
             while (rs.next()) {
                 FileRecord record = mapResultSet(rs);
-                String matchReason = buildMatchReason(contentTerms, pathTerms);
+                String matchReason = buildMatchReason(contentTerms, pathTerms, colorTerm);
                 results.add(new SearchResult(record, record.getPreview(), rank++, matchReason));
             }
         }
@@ -233,7 +262,7 @@ public class FileRepository {
         return results;
     }
 
-    private String buildMatchReason(List<String> contentTerms, List<String> pathTerms) {
+    private String buildMatchReason(List<String> contentTerms, List<String> pathTerms, String colorTerm) {
         StringBuilder sb = new StringBuilder();
         if (!contentTerms.isEmpty()) {
             sb.append("content match (").append(String.join(" AND ", contentTerms)).append(")");
@@ -242,6 +271,11 @@ public class FileRepository {
             if (sb.length() > 0)
                 sb.append("; ");
             sb.append("path match (").append(String.join(" AND ", pathTerms)).append(")");
+        }
+        if (colorTerm != null && !colorTerm.isBlank()) {
+            if (sb.length() > 0)
+                sb.append("; ");
+            sb.append("color match (").append(colorTerm).append(")");
         }
         return sb.toString();
     }
@@ -322,7 +356,10 @@ public class FileRepository {
         try {
             record.setPathScore(rs.getDouble("path_score"));
         } catch (SQLException ignored) {
-
+        }
+        try {
+            record.setDominantColor(rs.getString("dominant_color"));
+        } catch (SQLException ignored) {
         }
         return record;
     }
