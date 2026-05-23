@@ -9,6 +9,15 @@ import org.example.db.DatabaseManager;
 import org.example.db.FileRepository;
 import org.example.model.DuplicateGroup;
 import org.example.model.IndexReport;
+import org.example.model.SearchResult;
+import org.example.query.BaseQueryBuilder;
+import org.example.query.LogicDecorator;
+import org.example.query.SanitizationDecorator;
+import org.example.query.SynonymDecorator;
+import org.example.widget.ImageGalleryWidget;
+import org.example.widget.LogAnalyzerWidget;
+import org.example.widget.Widget;
+import org.example.widget.WidgetFactory;
 import org.example.indexing.FileProcessor;
 import org.example.indexing.ImageFileStrategy;
 import org.example.indexing.TextFileStrategy;
@@ -40,6 +49,16 @@ public class Main {
             QueryEngine queryEngine = new QueryEngine(repository, historyRepository);
             queryEngine.addObserver(new RankBoostObserver(historyRepository));
             queryEngine.addObserver(new HistoryObserver(historyRepository));
+
+            queryEngine.setQueryBuilder(
+                    new LogicDecorator(
+                    new SynonymDecorator(
+                    new SanitizationDecorator(
+                    new BaseQueryBuilder()))));
+
+            WidgetFactory widgetFactory = new WidgetFactory(List.of(
+                    new LogAnalyzerWidget(),
+                    new ImageGalleryWidget()));
 
             printWelcome();
 
@@ -79,7 +98,11 @@ public class Main {
                             continue;
                         }
 
-                        queryEngine.search(parts[1]);
+                        List<SearchResult> results = queryEngine.search(parts[1]);
+                        for (Widget w : widgetFactory.getActivated(results, parts[1])) {
+                            System.out.println();
+                            w.display(results);
+                        }
                     }
 
                     case "rank" -> {

@@ -6,6 +6,8 @@ import org.example.parser.ParsedQuery;
 import org.example.parser.QueryParser;
 import org.example.db.SearchHistoryRepository;
 import org.example.observer.SearchObserver;
+import org.example.query.BaseQueryBuilder;
+import org.example.query.QueryBuilder;
 import org.example.ranking.RankingStrategy;
 import org.example.ranking.RelevanceRankingStrategy;
 
@@ -19,11 +21,16 @@ public class QueryEngine {
     private final SearchHistoryRepository historyRepository;
     private RankingStrategy currentStrategy;
     private final List<SearchObserver> observers = new ArrayList<>();
+    private QueryBuilder queryBuilder = new BaseQueryBuilder();
 
     public QueryEngine(FileRepository repository, SearchHistoryRepository historyRepository) {
         this.repository = repository;
         this.historyRepository = historyRepository;
         this.currentStrategy = new RelevanceRankingStrategy();
+    }
+
+    public void setQueryBuilder(QueryBuilder queryBuilder) {
+        this.queryBuilder = queryBuilder;
     }
 
     public void addObserver(SearchObserver observer) {
@@ -59,9 +66,10 @@ public class QueryEngine {
                 .toLowerCase();
     }
 
-    public void search(String rawQuery) {
+    public List<SearchResult> search(String rawQuery) {
         try {
-            ParsedQuery parsedQuery = QueryParser.parse(rawQuery);
+            String queryToProcess = hasQualifiers(rawQuery) ? rawQuery : queryBuilder.build(rawQuery);
+            ParsedQuery parsedQuery = QueryParser.parse(queryToProcess);
             List<SearchResult> results = repository.searchParsed(parsedQuery);
 
             notifyObservers(rawQuery, results);
@@ -69,7 +77,7 @@ public class QueryEngine {
 
             if (results.isEmpty()) {
                 System.out.println("No results found for: " + formatHeader(parsedQuery));
-                return;
+                return results;
             }
 
             System.out.println("\nSearch results for: " + formatHeader(parsedQuery)
@@ -84,9 +92,18 @@ public class QueryEngine {
             System.out.println("─".repeat(50));
             System.out.println("Total: " + results.size() + " result(s)");
 
+            return results;
+
         } catch (SQLException e) {
             System.err.println("[Search] Error executing query: " + e.getMessage());
+            return List.of();
         }
+    }
+
+    private boolean hasQualifiers(String rawQuery) {
+        if (rawQuery == null) return false;
+        String lower = rawQuery.toLowerCase();
+        return lower.contains("content:") || lower.contains("path:") || lower.contains("color:");
     }
 
     private String formatHeader(ParsedQuery query) {

@@ -140,7 +140,7 @@ public class FileRepository {
         List<SearchResult> results = new ArrayList<>();
 
         String ftsSQL = """
-                SELECT f.path, f.name, f.extension, f.size, f.last_modified, f.file_hash, f.preview, f.path_score
+                SELECT f.path, f.name, f.extension, f.size, f.last_modified, f.file_hash, f.preview, f.path_score, f.dominant_color
                 FROM files_fts fts
                 JOIN files f ON fts.path = f.path
                 WHERE files_fts MATCH ?
@@ -151,7 +151,7 @@ public class FileRepository {
                         """;
 
         String nameSQL = """
-                SELECT path, name, extension, size, last_modified, file_hash, preview, path_score
+                SELECT path, name, extension, size, last_modified, file_hash, preview, path_score, dominant_color
                 FROM files
                 WHERE name LIKE ?
                 LIMIT 10
@@ -193,7 +193,7 @@ public class FileRepository {
 
         StringBuilder sql = new StringBuilder("""
                 SELECT f.path, f.name, f.extension, f.size,
-                       f.last_modified, f.file_hash, f.preview, f.path_score
+                       f.last_modified, f.file_hash, f.preview, f.path_score, f.dominant_color
                 FROM files f
                 """);
 
@@ -336,9 +336,17 @@ public class FileRepository {
         String[] terms = query.trim().split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < terms.length; i++) {
-            if (i > 0)
-                sb.append(" ");
-            sb.append("\"").append(terms[i].replace("\"", "\"\"")).append("\"");
+            if (i > 0) sb.append(" ");
+            String t = terms[i];
+            if (t.equalsIgnoreCase("OR") || t.equalsIgnoreCase("AND") || t.equalsIgnoreCase("NOT")) {
+                sb.append(t.toUpperCase());
+            } else if (t.endsWith("*")) {
+                // prefix query: "word"* is valid FTS5 syntax for prefix matching
+                String word = t.substring(0, t.length() - 1).replace("\"", "\"\"");
+                sb.append("\"").append(word).append("\"*");
+            } else {
+                sb.append("\"").append(t.replace("\"", "\"\"")).append("\"");
+            }
         }
         return sb.toString();
     }
